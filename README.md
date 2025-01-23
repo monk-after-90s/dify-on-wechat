@@ -316,6 +316,12 @@ dify图片识别配置如下，另外需要在dify应用中开启图片上传与
   "image_recognition": true
 }
 ```
+## 10. 支持原[CoW](https://github.com/zhayujie/chatgpt-on-wechat)的讯飞语音识别
+
+需要安装ffmpeg和ffprobe。如果是conda环境，直接执行
+```shell
+conda install ffmpeg
+```
 
 # 更新日志
 - 2025/01/06 修复在微信群中微信账号无法识别命令的bug，感谢[**sofs2005**](https://github.com/sofs2005)贡献的代码
