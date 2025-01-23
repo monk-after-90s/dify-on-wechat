@@ -16,21 +16,16 @@
 #  "BusinessArgsASR":{"domain": "iat", "language": "zh_cn", "accent": "mandarin", "vad_eos":10000, "dwa": "wpgs"}  #语音听写的参数，具体可以参考xfyun.cn的文档
 # }
 #####################################################################
-
 import json
 import os
 import time
-
 from bridge.reply import Reply, ReplyType
 from common.log import logger
 from common.tmp_dir import TmpDir
-from config import conf
 from voice.voice import Voice
 from .xunfei_asr import xunfei_asr
 from .xunfei_tts import xunfei_tts
-from voice.audio_convert import any_to_mp3
-import shutil
-from pydub import AudioSegment
+from voice.audio_convert import any_to_wav, any_to_mp3
 
 
 class XunfeiVoice(Voice):
@@ -46,7 +41,7 @@ class XunfeiVoice(Voice):
             self.APIKey = str(conf.get("APIKey"))
             self.APISecret = str(conf.get("APISecret"))
             self.BusinessArgsTTS = conf.get("BusinessArgsTTS")
-            self.BusinessArgsASR= conf.get("BusinessArgsASR")
+            self.BusinessArgsASR = conf.get("BusinessArgsASR")
 
         except Exception as e:
             logger.warn("XunfeiVoice init failed: %s, ignore " % e)
@@ -55,17 +50,23 @@ class XunfeiVoice(Voice):
         # 识别本地文件
         try:
             logger.debug("[Xunfei] voice file name={}".format(voice_file))
-            #print("voice_file===========",voice_file)
-            #print("voice_file_type===========",type(voice_file))
-            #mp3_name, file_extension = os.path.splitext(voice_file)
-            #mp3_file = mp3_name + ".mp3"
-            #pcm_data=get_pcm_from_wav(voice_file)
-            #mp3_name, file_extension = os.path.splitext(voice_file)
-            #AudioSegment.from_wav(voice_file).export(mp3_file, format="mp3")
-            #shutil.copy2(voice_file, 'tmp/test1.wav')
-            #shutil.copy2(mp3_file, 'tmp/test1.mp3')
-            #print("voice and mp3 file",voice_file,mp3_file)
-            text = xunfei_asr(self.APPID,self.APISecret,self.APIKey,self.BusinessArgsASR,voice_file)
+            # print("voice_file===========",voice_file)
+            # print("voice_file_type===========",type(voice_file))
+            # mp3_name, file_extension = os.path.splitext(voice_file)
+            # mp3_file = mp3_name + ".mp3"
+            # pcm_data=get_pcm_from_wav(voice_file)
+            # mp3_name, file_extension = os.path.splitext(voice_file)
+            # AudioSegment.from_wav(voice_file).export(mp3_file, format="mp3")
+            # shutil.copy2(voice_file, 'tmp/test1.wav')
+            # shutil.copy2(mp3_file, 'tmp/test1.mp3')
+            # print("voice and mp3 file",voice_file,mp3_file)
+            org_voice_file = voice_file
+            mp3_voice_file = voice_file + ".mp3"
+            wav_voice_file = voice_file + ".wav"
+            any_to_mp3(org_voice_file, mp3_voice_file)
+            any_to_wav(mp3_voice_file, wav_voice_file)
+            voice_file = wav_voice_file
+            text = xunfei_asr(self.APPID, self.APISecret, self.APIKey, self.BusinessArgsASR, voice_file)
             logger.info("讯飞语音识别到了: {}".format(text))
             reply = Reply(ReplyType.TEXT, text)
         except Exception as e:
@@ -77,7 +78,7 @@ class XunfeiVoice(Voice):
         try:
             # Avoid the same filename under multithreading
             fileName = TmpDir().path() + "reply-" + str(int(time.time())) + "-" + str(hash(text) & 0x7FFFFFFF) + ".mp3"
-            return_file = xunfei_tts(self.APPID,self.APIKey,self.APISecret,self.BusinessArgsTTS,text,fileName)
+            return_file = xunfei_tts(self.APPID, self.APIKey, self.APISecret, self.BusinessArgsTTS, text, fileName)
             logger.info("[Xunfei] textToVoice text={} voice file name={}".format(text, fileName))
             reply = Reply(ReplyType.VOICE, fileName)
         except Exception as e:
