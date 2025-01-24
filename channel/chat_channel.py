@@ -63,12 +63,12 @@ class ChatChannel(Channel):
                 if any(
                         [
                             group_name in group_name_white_list,
-                            "ALL_GROUP" in group_name_white_list,
+                            "ALL_GROUP" in group_name_white_list,  # ToDo 适配gewechat
                             check_contain(group_name, group_name_keyword_white_list),
                         ]
                 ):
                     group_chat_in_one_session = conf().get("group_chat_in_one_session", [])
-                    session_id = f"{cmsg.actual_user_id}@@{group_id}" # 当群聊未共享session时，session_id为user_id与group_id的组合，用于区分不同群聊以及单聊
+                    session_id = f"{cmsg.actual_user_id}@@{group_id}"  # 当群聊未共享session时，session_id为user_id与group_id的组合，用于区分不同群聊以及单聊
                     context["is_shared_session_group"] = False  # 默认为非共享会话群
                     if any(
                             [
@@ -86,7 +86,8 @@ class ChatChannel(Channel):
             else:
                 context["session_id"] = cmsg.other_user_id
                 context["receiver"] = cmsg.other_user_id
-            e_context = PluginManager().emit_event(EventContext(Event.ON_RECEIVE_MESSAGE, {"channel": self, "context": context}))
+            e_context = PluginManager().emit_event(
+                EventContext(Event.ON_RECEIVE_MESSAGE, {"channel": self, "context": context}))
             context = e_context["context"]
             if e_context.is_pass() or context is None:
                 return context
@@ -148,7 +149,7 @@ class ChatChannel(Channel):
                 else:
                     return None
             content = content.strip()
-            img_match_prefix = check_prefix(content, conf().get("image_create_prefix",[""]))
+            img_match_prefix = check_prefix(content, conf().get("image_create_prefix", [""]))
             if img_match_prefix:
                 content = content.replace(img_match_prefix, "", 1)
                 context.type = ContextType.IMAGE_CREATE
@@ -189,7 +190,8 @@ class ChatChannel(Channel):
         )
         reply = e_context["reply"]
         if not e_context.is_pass():
-            logger.debug("[chat_channel] ready to handle context: type={}, content={}".format(context.type, context.content))
+            logger.debug(
+                "[chat_channel] ready to handle context: type={}, content={}".format(context.type, context.content))
             if context.type == ContextType.TEXT or context.type == ContextType.IMAGE_CREATE:  # 文字和图片消息
                 context["channel"] = e_context["channel"]
                 reply = super().build_reply_content(context.content, context)
@@ -276,7 +278,8 @@ class ChatChannel(Channel):
                     logger.error("[chat_channel] unknown reply type: {}".format(reply.type))
                     return
             if desire_rtype and desire_rtype != reply.type and reply.type not in [ReplyType.ERROR, ReplyType.INFO]:
-                logger.warning("[chat_channel] desire_rtype: {}, but reply type: {}".format(context.get("desire_rtype"), reply.type))
+                logger.warning("[chat_channel] desire_rtype: {}, but reply type: {}".format(context.get("desire_rtype"),
+                                                                                            reply.type))
             return reply
 
     def _send_reply(self, context: Context, reply: Reply):
