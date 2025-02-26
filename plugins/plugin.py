@@ -1,12 +1,31 @@
+import asyncio
 import os
 import json
+import threading
+
 from config import pconf, plugin_config, conf, write_plugin_config
 from common.log import logger
+
+
+# 子线程运行事件循环
+def run_event_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
 
 
 class Plugin:
     def __init__(self):
         self.handlers = {}
+        # 子线程循环，供全部插件使用
+        self._sub_loop: asyncio.AbstractEventLoop | None = None
+
+    @property
+    def sub_loop(self):
+        if self._sub_loop is None:
+            self._sub_loop = asyncio.new_event_loop()
+            thread = threading.Thread(target=run_event_loop, args=(self._sub_loop,), daemon=True)
+            thread.start()
+        return self._sub_loop
 
     def load_config(self) -> dict:
         """
@@ -18,7 +37,8 @@ class Plugin:
         if not plugin_conf:
             # 全局配置不存在，则获取插件目录下的配置
             plugin_config_path = os.path.join(self.path, "config.json")
-            logger.debug(f"loading plugin config, plugin_config_path={plugin_config_path}, exist={os.path.exists(plugin_config_path)}")
+            logger.debug(
+                f"loading plugin config, plugin_config_path={plugin_config_path}, exist={os.path.exists(plugin_config_path)}")
             if os.path.exists(plugin_config_path):
                 with open(plugin_config_path, "r", encoding="utf-8") as f:
                     plugin_conf = json.load(f)
